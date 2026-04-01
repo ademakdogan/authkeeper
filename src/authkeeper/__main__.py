@@ -1,10 +1,6 @@
 """AuthKeeper entry point."""
 
-
-def main() -> None:
-    """Main entry point for AuthKeeper."""
-    print("AuthKeeper is starting... (TUI coming soon)")
-
+from authkeeper.app import main
 
 if __name__ == "__main__":
     main()
