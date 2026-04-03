@@ -361,26 +361,49 @@ class CLI:
         except ValueError:
             console.print("[red]Please specify a valid number.[/red]")
 
-    def _delete_entry(self, index_str: str) -> None:
-        """Delete an entry.
+    def _delete_entry(self, indices_str: str) -> None:
+        """Delete one or more entries.
+
+        Supports multiple indices like 'd 1 3 5' to delete entries 1, 3, and 5.
 
         Args:
-            index_str: Entry index as string.
+            indices_str: Space-separated entry indices as string.
         """
-        try:
-            index = int(index_str) - 1
-            entries = getattr(self, "_current_entries", None) or self.vault.get_all_entries()
+        entries = getattr(self, "_current_entries", None) or self.vault.get_all_entries()
 
-            if 0 <= index < len(entries):
-                entry = entries[index]
-                if Confirm.ask(f"Delete '{entry.name}'?", default=False):
-                    self.vault.delete_entry(entry.id)
-                    console.print("[green]✓ Entry deleted.[/green]")
-                    self._current_entries = None
-            else:
-                console.print("[red]Invalid entry number.[/red]")
-        except ValueError:
-            console.print("[red]Please specify a valid number.[/red]")
+        # Parse indices
+        indices: list[int] = []
+        for part in indices_str.split():
+            try:
+                idx = int(part) - 1  # Convert to 0-based
+                if 0 <= idx < len(entries):
+                    indices.append(idx)
+                else:
+                    console.print(f"[yellow]Skipping invalid number: {part}[/yellow]")
+            except ValueError:
+                console.print(f"[yellow]Skipping invalid input: {part}[/yellow]")
+
+        if not indices:
+            console.print("[red]No valid entry numbers provided.[/red]")
+            return
+
+        # Remove duplicates and sort in reverse (to delete from end first)
+        indices = sorted(set(indices), reverse=True)
+
+        # Get entries to delete
+        entries_to_delete = [entries[i] for i in indices]
+        names = ", ".join(f"'{e.name}'" for e in entries_to_delete)
+
+        if len(entries_to_delete) == 1:
+            prompt = f"Delete {names}?"
+        else:
+            prompt = f"Delete {len(entries_to_delete)} entries ({names})?"
+
+        if Confirm.ask(prompt, default=False):
+            for entry in entries_to_delete:
+                self.vault.delete_entry(entry.id)
+            console.print(f"[green]✓ {len(entries_to_delete)} entry(ies) deleted.[/green]")
+            self._current_entries = None
 
     def _lock_and_exit(self) -> None:
         """Lock the vault and exit."""
