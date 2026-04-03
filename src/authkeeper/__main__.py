@@ -1,6 +1,6 @@
 """AuthKeeper entry point."""
 
-from authkeeper.app import main
+from authkeeper.cli import main
 
 if __name__ == "__main__":
     main()

@@ -1,13 +1,13 @@
 [project]
 name = "authkeeper"
 version = "0.1.0"
-description = "Professional terminal password manager with encrypted storage and modern TUI"
+description = "Professional terminal password manager with encrypted storage and Rich CLI"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
     { name = "AuthKeeper Team" }
 ]
-keywords = ["password-manager", "security", "encryption", "tui", "terminal"]
+keywords = ["password-manager", "security", "encryption", "cli", "terminal"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -25,7 +25,7 @@ dependencies = [
     "argon2-cffi>=23.1.0",
     "cryptography>=42.0.0",
     "apsw>=3.45.0",
-    "textual>=0.50.0",
+    "rich>=13.7.0",
     "thefuzz>=0.22.0",
     "pyperclip>=1.8.0",
     "pydantic>=2.6.0",
