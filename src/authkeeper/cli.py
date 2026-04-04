@@ -160,7 +160,7 @@ class CLI:
         console.print("[4] Generate password")
         console.print("[5] Lock & Exit")
         console.print()
-        console.print("[dim]c <n>  Copy password  |  v <n>  View entry  |  d <n>  Delete entry[/dim]")
+        console.print("[dim]c <n>  Copy password  |  v <n>  View entry  |  e <n>  Edit  |  d <n>  Delete[/dim]")
 
     def _handle_command(self, command: str) -> None:
         """Handle a user command.
@@ -188,10 +188,12 @@ class CLI:
             self._view_entry(arg)
         elif cmd == "d" and arg:
             self._delete_entry(arg)
+        elif cmd == "e" and arg:
+            self._edit_entry(arg)
         elif cmd in ("q", "quit", "exit"):
             self._lock_and_exit()
         else:
-            console.print("[yellow]Unknown command. Try 1-5, c/v/d <n>, or q to quit.[/yellow]")
+            console.print("[yellow]Unknown command. Try 1-5, c/v/e/d <n>, or q to quit.[/yellow]")
 
     def _list_entries(self, entries: list[Entry] | None = None) -> None:
         """Display entries in a table.
@@ -358,6 +360,81 @@ class CLI:
                 ))
             else:
                 console.print("[red]Invalid entry number.[/red]")
+        except ValueError:
+            console.print("[red]Please specify a valid number.[/red]")
+
+    def _edit_entry(self, index_str: str) -> None:
+        """Edit an existing entry.
+
+        Args:
+            index_str: Entry index as string.
+        """
+        try:
+            index = int(index_str) - 1
+            entries = getattr(self, "_current_entries", None) or self.vault.get_all_entries()
+
+            if not (0 <= index < len(entries)):
+                console.print("[red]Invalid entry number.[/red]")
+                return
+
+            entry = entries[index]
+            console.print()
+            console.print(f"[bold]Edit Entry: {entry.name}[/bold]")
+            console.print("[dim]Press Enter to keep current value.[/dim]")
+            console.print()
+
+            # Name
+            new_name = Prompt.ask(
+                f"Name [dim]({entry.name})[/dim]",
+                default=entry.name,
+            )
+
+            # Username
+            new_username = Prompt.ask(
+                f"Username [dim]({entry.username or 'empty'})[/dim]",
+                default=entry.username or "",
+            )
+
+            # Password
+            password_prompt = "Password [dim](enter to keep, 'g' to generate)[/dim]"
+            new_password = Prompt.ask(password_prompt, default="")
+            if new_password.lower() == "g":
+                new_password = self._generator.generate()
+                console.print(f"[green]Generated: {new_password}[/green]")
+            elif not new_password:
+                new_password = entry.password
+
+            # URL
+            new_url = Prompt.ask(
+                f"URL [dim]({entry.url or 'empty'})[/dim]",
+                default=entry.url or "",
+            )
+
+            # Notes
+            new_notes = Prompt.ask(
+                f"Notes [dim]({(entry.notes[:20] + '...') if entry.notes and len(entry.notes) > 20 else entry.notes or 'empty'})[/dim]",
+                default=entry.notes or "",
+            )
+
+            # Favorite
+            new_favorite = Confirm.ask(
+                "Mark as favorite?",
+                default=entry.favorite,
+            )
+
+            # Update entry
+            entry.name = new_name
+            entry.username = new_username
+            entry.password = new_password
+            entry.url = new_url
+            entry.notes = new_notes
+            entry.favorite = new_favorite
+            entry.touch()
+
+            self.vault.update_entry(entry)
+            console.print("[green]✓ Entry updated successfully![/green]")
+            self._current_entries = None
+
         except ValueError:
             console.print("[red]Please specify a valid number.[/red]")
 
