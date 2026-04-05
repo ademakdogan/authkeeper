@@ -5,7 +5,9 @@ Provides password management through a menu-driven interaction.
 """
 
 import getpass
+import json
 import sys
+from pathlib import Path
 from typing import NoReturn
 
 from rich.console import Console
@@ -158,7 +160,8 @@ class CLI:
         console.print("[2] Add entry")
         console.print("[3] Search [dim]<query>[/dim]")
         console.print("[4] Generate password")
-        console.print("[5] Lock & Exit")
+        console.print("[5] Export/Import")
+        console.print("[6] Lock & Exit")
         console.print()
         console.print("[dim]c <n>  Copy password  |  v <n>  View entry  |  e <n>  Edit  |  d <n>  Delete[/dim]")
 
@@ -181,6 +184,8 @@ class CLI:
         elif cmd == "4":
             self._generate_password()
         elif cmd == "5":
+            self._export_import_menu()
+        elif cmd == "6":
             self._lock_and_exit()
         elif cmd == "c" and arg:
             self._copy_password(arg)
@@ -192,8 +197,12 @@ class CLI:
             self._edit_entry(arg)
         elif cmd in ("q", "quit", "exit"):
             self._lock_and_exit()
+        elif cmd == "export":
+            self._export_entries(arg)
+        elif cmd == "import":
+            self._import_entries(arg)
         else:
-            console.print("[yellow]Unknown command. Try 1-5, c/v/e/d <n>, or q to quit.[/yellow]")
+            console.print("[yellow]Unknown command. Try 1-6, c/v/e/d <n>, or q to quit.[/yellow]")
 
     def _list_entries(self, entries: list[Entry] | None = None) -> None:
         """Display entries in a table.
@@ -312,6 +321,117 @@ class CLI:
         if Confirm.ask("Copy to clipboard?", default=True):
             copy_to_clipboard(password)
             console.print("[green]✓ Copied! (clears in 30 seconds)[/green]")
+
+    def _export_import_menu(self) -> None:
+        """Show export/import submenu."""
+        console.print()
+        console.print("[bold]Export/Import[/bold]")
+        console.print("[1] Export entries to JSON")
+        console.print("[2] Import entries from JSON")
+        console.print("[3] Back to main menu")
+
+        choice = Prompt.ask("\n[bold cyan]>[/bold cyan]", default="3")
+
+        if choice == "1":
+            self._export_entries(None)
+        elif choice == "2":
+            self._import_entries(None)
+
+    def _export_entries(self, filepath: str | None) -> None:
+        """Export all entries to a JSON file.
+
+        Args:
+            filepath: Optional file path. Prompts if not provided.
+        """
+        if not filepath:
+            filepath = Prompt.ask(
+                "Export file path",
+                default="authkeeper_export.json",
+            )
+
+        entries = self.vault.get_all_entries()
+        if not entries:
+            console.print("[yellow]No entries to export.[/yellow]")
+            return
+
+        # Convert entries to dict format
+        export_data = {
+            "version": "1.0",
+            "entries": [
+                {
+                    "name": e.name,
+                    "username": e.username,
+                    "password": e.password,
+                    "url": e.url,
+                    "notes": e.notes,
+                    "favorite": e.favorite,
+                    "entry_type": e.entry_type.value,
+                }
+                for e in entries
+            ],
+        }
+
+        try:
+            path = Path(filepath).expanduser()
+            path.write_text(json.dumps(export_data, indent=2, ensure_ascii=False))
+            console.print(f"[green]✓ Exported {len(entries)} entries to {path}[/green]")
+        except Exception as e:
+            console.print(f"[red]✗ Export failed: {e}[/red]")
+
+    def _import_entries(self, filepath: str | None) -> None:
+        """Import entries from a JSON file.
+
+        Args:
+            filepath: Optional file path. Prompts if not provided.
+        """
+        if not filepath:
+            filepath = Prompt.ask("Import file path")
+
+        if not filepath:
+            return
+
+        path = Path(filepath).expanduser()
+        if not path.exists():
+            console.print(f"[red]✗ File not found: {path}[/red]")
+            return
+
+        try:
+            data = json.loads(path.read_text())
+            entries_data = data.get("entries", [])
+
+            if not entries_data:
+                console.print("[yellow]No entries found in file.[/yellow]")
+                return
+
+            console.print(f"[dim]Found {len(entries_data)} entries in file.[/dim]")
+
+            if not Confirm.ask("Import all entries?", default=True):
+                return
+
+            imported = 0
+            for entry_data in entries_data:
+                try:
+                    entry = Entry(
+                        name=entry_data.get("name", "Unnamed"),
+                        username=entry_data.get("username", ""),
+                        password=entry_data.get("password", ""),
+                        url=entry_data.get("url", ""),
+                        notes=entry_data.get("notes", ""),
+                        favorite=entry_data.get("favorite", False),
+                        entry_type=EntryType(entry_data.get("entry_type", "password")),
+                    )
+                    self.vault.add_entry(entry)
+                    imported += 1
+                except Exception as e:
+                    console.print(f"[yellow]Skipped entry: {e}[/yellow]")
+
+            console.print(f"[green]✓ Imported {imported} entries.[/green]")
+            self._current_entries = None
+
+        except json.JSONDecodeError:
+            console.print("[red]✗ Invalid JSON file.[/red]")
+        except Exception as e:
+            console.print(f"[red]✗ Import failed: {e}[/red]")
 
     def _copy_password(self, index_str: str) -> None:
         """Copy password of entry at index.
