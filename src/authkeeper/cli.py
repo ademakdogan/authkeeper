@@ -201,8 +201,10 @@ class CLI:
             self._export_entries(arg)
         elif cmd == "import":
             self._import_entries(arg)
+        elif cmd == "fav":
+            self._list_favorites()
         else:
-            console.print("[yellow]Unknown command. Try 1-6, c/v/e/d <n>, or q to quit.[/yellow]")
+            console.print("[yellow]Unknown command. Try 1-6, fav, c/v/e/d <n>, or q to quit.[/yellow]")
 
     def _list_entries(self, entries: list[Entry] | None = None) -> None:
         """Display entries in a table.
@@ -234,6 +236,12 @@ class CLI:
 
         console.print(table)
         self._current_entries = entries
+
+    def _list_favorites(self) -> None:
+        """List only favorite entries."""
+        entries = self.vault.get_favorite_entries()
+        console.print("\n[bold]⭐ Favorites[/bold]")
+        self._list_entries(entries)
 
     def _add_entry(self) -> None:
         """Add a new entry interactively."""
