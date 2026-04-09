@@ -441,16 +441,19 @@ class CLI:
         except Exception as e:
             console.print(f"[red]✗ Import failed: {e}[/red]")
 
-    def _copy_password(self, index_str: str) -> None:
-        """Copy password of entry at index.
+    def _copy_password(self, identifier: str) -> None:
+        """Copy password of entry by index or name.
+
+        Supports both number (c 1) and name (c github) for quick copy.
 
         Args:
-            index_str: Entry index as string.
+            identifier: Entry index or name to search for.
         """
-        try:
-            index = int(index_str) - 1
-            entries = getattr(self, "_current_entries", None) or self.vault.get_all_entries()
+        entries = getattr(self, "_current_entries", None) or self.vault.get_all_entries()
 
+        # Try as number first
+        try:
+            index = int(identifier) - 1
             if 0 <= index < len(entries):
                 entry = entries[index]
                 if entry.password:
@@ -458,10 +461,30 @@ class CLI:
                     console.print(f"[green]✓ Password for '{entry.name}' copied! (clears in 30s)[/green]")
                 else:
                     console.print("[yellow]No password set for this entry.[/yellow]")
-            else:
-                console.print("[red]Invalid entry number.[/red]")
+                return
         except ValueError:
-            console.print("[red]Please specify a valid number.[/red]")
+            pass
+
+        # Try as name (fuzzy search)
+        matches = self.vault.search(identifier, fuzzy=True, threshold=70)
+        if not matches:
+            console.print(f"[yellow]No entry found matching '{identifier}'.[/yellow]")
+            return
+
+        if len(matches) == 1:
+            entry = matches[0]
+            if entry.password:
+                copy_to_clipboard(entry.password)
+                console.print(f"[green]✓ Password for '{entry.name}' copied! (clears in 30s)[/green]")
+            else:
+                console.print("[yellow]No password set for this entry.[/yellow]")
+        else:
+            # Multiple matches - show options
+            console.print(f"[dim]Multiple matches for '{identifier}':[/dim]")
+            for i, e in enumerate(matches[:5], 1):
+                console.print(f"  {i}. {e.name}")
+            console.print("[dim]Use the entry number to copy.[/dim]")
+            self._current_entries = matches
 
     def _view_entry(self, index_str: str) -> None:
         """View entry details.
