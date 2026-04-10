@@ -164,6 +164,7 @@ class CLI:
         console.print("[6] Lock & Exit")
         console.print()
         console.print("[dim]c <n>  Copy password  |  v <n>  View entry  |  e <n>  Edit  |  d <n>  Delete[/dim]")
+        console.print("[dim]p <n>  Preview password  |  fav  Favorites only[/dim]")
 
     def _handle_command(self, command: str) -> None:
         """Handle a user command.
@@ -195,6 +196,8 @@ class CLI:
             self._delete_entry(arg)
         elif cmd == "e" and arg:
             self._edit_entry(arg)
+        elif cmd == "p" and arg:
+            self._preview_password(arg)
         elif cmd in ("q", "quit", "exit"):
             self._lock_and_exit()
         elif cmd == "export":
@@ -485,6 +488,40 @@ class CLI:
                 console.print(f"  {i}. {e.name}")
             console.print("[dim]Use the entry number to copy.[/dim]")
             self._current_entries = matches
+
+    def _preview_password(self, index_str: str) -> None:
+        """Preview password with masked display and reveal option.
+
+        Args:
+            index_str: Entry index as string.
+        """
+        try:
+            index = int(index_str) - 1
+            entries = getattr(self, "_current_entries", None) or self.vault.get_all_entries()
+
+            if not (0 <= index < len(entries)):
+                console.print("[red]Invalid entry number.[/red]")
+                return
+
+            entry = entries[index]
+            if not entry.password:
+                console.print("[yellow]No password set for this entry.[/yellow]")
+                return
+
+            # Show masked password
+            password = entry.password
+            masked = password[0] + "*" * (len(password) - 2) + password[-1] if len(password) > 2 else "*" * len(password)
+
+            console.print()
+            console.print(f"[bold]{entry.name}[/bold]")
+            console.print(f"[dim]Masked:[/dim] {masked}")
+
+            if Confirm.ask("Reveal full password?", default=False):
+                console.print(f"[green]Password:[/green] {password}")
+                console.print("[dim](Visible for 5 seconds...)[/dim]")
+
+        except ValueError:
+            console.print("[red]Please specify a valid number.[/red]")
 
     def _view_entry(self, index_str: str) -> None:
         """View entry details.
