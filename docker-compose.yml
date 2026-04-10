@@ -1,0 +1,15 @@
+services:
+  authkeeper:
+    build: .
+    image: authkeeper:latest
+    container_name: authkeeper
+    stdin_open: true
+    tty: true
+    volumes:
+      - authkeeper-data:/home/authkeeper/.local/share/authkeeper
+    environment:
+      - TERM=xterm-256color
+
+volumes:
+  authkeeper-data:
+    name: authkeeper-vault
