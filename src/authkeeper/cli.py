@@ -163,8 +163,8 @@ class CLI:
         console.print("[5] Export/Import")
         console.print("[6] Lock & Exit")
         console.print()
-        console.print("[dim]c <n>  Copy password  |  v <n>  View entry  |  e <n>  Edit  |  d <n>  Delete[/dim]")
-        console.print("[dim]p <n>  Preview password  |  fav  Favorites only[/dim]")
+        console.print("[dim]c <n>  Copy password   |  v <n>  View    |  e <n>  Edit  |  d <n>  Delete[/dim]")
+        console.print("[dim]p <n>  Preview password |  fav   Favorites only             [/dim]")
 
     def _handle_command(self, command: str) -> None:
         """Handle a user command.
@@ -518,7 +518,6 @@ class CLI:
 
             if Confirm.ask("Reveal full password?", default=False):
                 console.print(f"[green]Password:[/green] {password}")
-                console.print("[dim](Visible for 5 seconds...)[/dim]")
 
         except ValueError:
             console.print("[red]Please specify a valid number.[/red]")
